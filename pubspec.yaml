@@ -1,7 +1,7 @@
-name: MockWebServer
+name: mock_web_server
 version: 1.0.0
 description: Web server that can be used for testing HTTP clients
-author: Miguel Castiblanco
+author: Miguel Castiblanco <miguel@starcarr.co>
 homepage: https://gitlab.com/Starcarr/MockWebServer
 
 dev_dependencies:

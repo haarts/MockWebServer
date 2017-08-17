@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import 'package:MockWebServer/mock_server.dart';
+import 'package:mock_web_server/mock_web_server.dart';
 import 'package:test/test.dart';
 import 'dart:io';
 import 'dart:async';
