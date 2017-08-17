@@ -89,7 +89,7 @@ class MockWebServer {
       if (response.delay != null) {
         Completer completer = new Completer();
 
-        await new Timer(response.delay, () {
+        new Timer(response.delay, () {
           completer.complete();
         });
 
