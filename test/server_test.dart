@@ -109,7 +109,7 @@ void main() {
       return new MockResponse()..httpCode = 404;
     };
 
-    _server.setDispatcher(dispatcher);
+    _server.dispatcher = dispatcher;
 
     HttpClientResponse response = await _get("unknown");
     expect(response.statusCode, 404);

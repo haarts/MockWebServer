@@ -28,10 +28,10 @@ class MockWebServer {
   int port;
   String host;
   String url;
+  var dispatcher;
   HttpServer _server;
   List<MockResponse> _responses = [];
   List<HttpRequest> _requests = [];
-  var dispatcher;
 
   MockWebServer({this.port: 0});
 
@@ -67,10 +67,6 @@ class MockWebServer {
     _requests.removeLast();
 
     return request;
-  }
-
-  void setDispatcher(MockResponse dispatcher(HttpRequest request)) {
-    this.dispatcher = dispatcher;
   }
 
   _serve() async {

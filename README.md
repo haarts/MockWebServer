@@ -125,7 +125,7 @@ var dispatcher = (HttpRequest request) {
   return new MockResponse()..httpCode = 404;
 };
 
-server.setDispatcher(dispatcher);
+server.dispatcher = dispatcher;
 
 HttpClientResponse response = request(path: "unknown");
 expect(response.statusCode, 404);
@@ -137,6 +137,9 @@ expect(read(response), "working");
 response = request(path: "users/1");
 expect(response.statusCode, 201);
 ```
+
+### Stopping
+During the `tearDown` of your tests you should stop the server. `server.shutdown()` will do.
 
 ### Missing
 Currently MockWebServer doesn't support SSL 
