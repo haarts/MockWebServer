@@ -44,19 +44,19 @@ Once the server is started, you can queue the responses that you want. **The res
 First In First Out**
 
 ```dart
-// The first response will be and empty body with response code 401
+// Enqueue an empty body with response code 401
 server.enqueue(httpCode: 401);
 
-// response code defaults to 200, so this will be a 200 with the given json as the body
+// Response code defaults to 200, so this will be a 200 with the given json as the body
 server.enqueue(body: '{ "message" : "hi"}');
 
-// The third one will be an HTTP 200 with empty body and the following header
+// HTTP 200 with empty body and some header
 Map<String, String> headers = new Map();
 headers["X-Server"] = "MockDart";
 server.enqueue(headers: headers);
 
 // All the parameters are optional so you can mix and match according to what you need
-server.enqueue(httpCode: 201, body: "answer", headers: headers);
+server.enqueue(httpCode: 201, body: "answer", headers: headers, duration: duration);
 
 // You can always call enqueueResponse() to directly enqueue a MockResponse
 Map<String, String> headers = new Map();
@@ -69,11 +69,6 @@ var mockResponse = new MockResponse()
   ..delay = new Duration(seconds: 2);
 
 server.enqueueResponse(mockResponse);
-var response = request(path: "");
-expect(response.statusCode, 201);
-expect(response.headers.value("X-Server"), "MockDart");
-expect(read(response), "Created");
-
 ```
 
 ### Delaying the response
