@@ -98,6 +98,11 @@ class MockWebServer {
    */
   Dispatcher dispatcher;
 
+  /**
+   * Amount of requests that the server has received.
+   */
+  int requestCount = 0;
+
   HttpServer _server;
   List<MockResponse> _responses = [];
   List<HttpRequest> _requests = [];
@@ -166,6 +171,7 @@ class MockWebServer {
    */
   _serve() async {
     await for (HttpRequest request in _server) {
+      requestCount++;
       _requests.add(request);
 
       if (dispatcher != null) {
