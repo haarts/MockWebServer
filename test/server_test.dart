@@ -83,7 +83,7 @@ void main() {
     expect(await _read(response), "world");
   });
 
-  test("Take requests", () async {
+  test("Take requests & request count", () async {
     _server.enqueue(body: "a");
     _server.enqueue(body: "b");
     _server.enqueue(body: "c");
@@ -94,6 +94,7 @@ void main() {
     expect(_server.takeRequest().uri.path, "/third");
     expect(_server.takeRequest().uri.path, "/second");
     expect(_server.takeRequest().uri.path, "/first");
+    expect(_server.requestCount, 3);
   });
 
   test("Dispatcher", () async {
@@ -104,6 +105,10 @@ void main() {
           ..body = "working";
       } else if (request.uri.path == "/users/1") {
         return new MockResponse()..httpCode = 201;
+      } else if (request.uri.path == "/delay") {
+        return new MockResponse()
+          ..httpCode = 200
+          ..delay = new Duration(milliseconds: 1500);
       }
 
       return new MockResponse()..httpCode = 404;
@@ -120,6 +125,13 @@ void main() {
 
     response = await _get("users/1");
     expect(response.statusCode, 201);
+
+    Stopwatch stopwatch = new Stopwatch()..start();
+    response = await _get("delay");
+    stopwatch.stop();
+    expect(stopwatch.elapsed.inMilliseconds,
+        greaterThanOrEqualTo(new Duration(milliseconds: 1500).inMilliseconds));
+    expect(response.statusCode, 200);
   });
 
   test("Enqueue MockResponse", () async {
@@ -140,8 +152,7 @@ void main() {
 
   test("Delay", () async {
     _server.enqueue(delay: new Duration(seconds: 2), httpCode: 201);
-    Stopwatch stopwatch = new Stopwatch();
-    stopwatch.start();
+    Stopwatch stopwatch = new Stopwatch()..start();
     HttpClientResponse response = await _get("");
 
     stopwatch.stop();
