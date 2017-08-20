@@ -1,5 +1,5 @@
 name: mock_web_server
-version: 1.0.0
+version: 1.1.0
 description: Web server that can be used for testing HTTP clients
 author: Miguel Castiblanco <miguel@starcarr.co>
 homepage: https://gitlab.com/Starcarr/MockWebServer
