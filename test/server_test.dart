@@ -83,7 +83,7 @@ void main() {
     expect(await _read(response), "world");
   });
 
-  test("Take requests", () async {
+  test("Take requests & request count", () async {
     _server.enqueue(body: "a");
     _server.enqueue(body: "b");
     _server.enqueue(body: "c");
@@ -94,6 +94,7 @@ void main() {
     expect(_server.takeRequest().uri.path, "/third");
     expect(_server.takeRequest().uri.path, "/second");
     expect(_server.takeRequest().uri.path, "/first");
+    expect(_server.requestCount, 3);
   });
 
   test("Dispatcher", () async {
