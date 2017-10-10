@@ -160,6 +160,43 @@ void main() {
         greaterThanOrEqualTo(new Duration(seconds: 2).inMilliseconds));
     expect(response.statusCode, 201);
   });
+
+  test('paralel delay', () async {
+    String body70 = "70 milliseconds";
+    String body40 = "40 milliseconds";
+    String body20 = "20 milliseconds";
+    _server.enqueue(delay: new Duration(milliseconds: 40), body: body40);
+    _server.enqueue(delay: new Duration(milliseconds: 70), body: body70);
+    _server.enqueue(delay: new Duration(milliseconds: 20), body: body20);
+
+    Completer completer = new Completer();
+    List<String> responses = new List();
+
+    _get("").then((res) async { // 40 milliseconds
+      String result = await _read(res);
+      responses.add(result);
+    });
+
+    _get("").then((res) async { // 70 milliseconds
+      String result = await _read(res);
+      responses.add(result);
+
+      // complete on the longer operation
+      completer.complete();
+    });
+
+    _get("").then((res) async { // 20 milliseconds
+      String result = await _read(res);
+      responses.add(result);
+    });
+
+    await completer.future;
+
+    // validate that the responses happened in order 20, 40, 70
+    expect(responses[0], body20);
+    expect(responses[1], body40);
+    expect(responses[2], body70);
+  });
 }
 
 _get(String path) async {
