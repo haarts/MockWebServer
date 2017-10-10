@@ -42,7 +42,7 @@ import 'dart:async';
  *  _server.dispatcher = dispatcher;
  *
  */
-typedef MockResponse Dispatcher(HttpRequest request);
+typedef Future<MockResponse> Dispatcher(HttpRequest request);
 
 /**
  * Defines a set of values that the `MockWebServer` will return to a given
@@ -176,7 +176,7 @@ class MockWebServer {
 
       if (dispatcher != null) {
         assert(dispatcher is Dispatcher);
-        MockResponse response = dispatcher(request);
+        MockResponse response = await dispatcher(request);
         _process(request, response);
         continue;
       }
