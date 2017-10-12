@@ -138,8 +138,41 @@ response = request(path: "users/1");
 expect(response.statusCode, 201);
 ```
 
+### TLS
+Starting 1.3.0, you can start the server for TLS testing by passing the `https` flag 
+as `true` when creating the instance of MockWebServer.
+
+```dart
+MockWebServer _server = new MockWebServer(https: true);
+```
+
+If you do so, and your client validates that the certs are valid, you will need to use a
+proper `SecurityContext`, for example using the included `trusted_certs.pem`
+
+```dart
+var certRes =
+        new Resource('package:mock_web_server/certificates/trusted_certs.pem');
+List<int> cert = await certRes.readAsBytes();
+
+SecurityContext clientContext = new SecurityContext()
+       ..setTrustedCertificatesBytes(cert);
+    
+var client = new HttpClient(context: clientContext);
+
+```  
+
+Please check the tests of MockWebServer to see a complete example of this.
+
+### IPv6
+If want to use IPv6, you can pass `addressType: InternetAddressType.IP_V6` in the 
+constructor to have the server use it. Keep in mind that the `host` property 
+will then be `::1` instead of `127.0.0.1`.  
+
+```dart
+MockWebServer _server =
+        new MockWebServer(port: 8030, addressType: InternetAddressType.IP_V6);
+
+```
+
 ### Stopping
 During the `tearDown` of your tests you should stop the server. `server.shutdown()` will do.
-
-### Missing
-Currently MockWebServer doesn't support SSL 
