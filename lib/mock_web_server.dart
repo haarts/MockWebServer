@@ -16,6 +16,7 @@
 
 import 'dart:io';
 import 'dart:async';
+import 'package:resource/resource.dart' show Resource;
 
 /**
  * A `Dispatcher` is used to customize the responses of the `MockWebServer`
@@ -73,25 +74,23 @@ class MockResponse {
 class MockWebServer {
   /**
    * If the server has been started, returns the port in which the server
-   * is running. If the server hasn't been started it will return the port
-   * in which the server was requested to start, or zero if it wasn't requested
-   * to start in an specific port.
+   * is running. Will throw [NoSuchMethodError] if the server is not started.
    */
-  int port;
+  int get port => _server.port;
 
   /**
-   * Returns the host of the server. If there is no host associated with the
-   * address, the IP will be returned here.
+   * Returns the host of the server. [:127.0.0.1:] if the server is started
+   * with [:IPv4:], [:::1:] if it was started with [:IPv6:].
    *
-   * Will be null if the server hasn't started.
+   * Will throw [NoSuchMethodError] if the server is not started.
    */
-  String host;
+  String get host => _server.address.host;
 
   /**
    * Returns a String with the complete url to connect to the server. Will
-   * be null if the server hasn't started.
+   * throw [NoSuchMethodError] if the server is not started.
    */
-  String url;
+  String get url => "${_https ? "https" : "http"}://$host:$port/";
 
   /**
    * Set this if using the queue is not enough for your requirements.
@@ -106,14 +105,32 @@ class MockWebServer {
   HttpServer _server;
   List<MockResponse> _responses = [];
   List<HttpRequest> _requests = [];
+  int _port;
+  bool _https;
+  InternetAddressType _addressType;
 
   /**
    * Creates an instance of a `MockWebServer`. If a [port] is defined, it
    * will be used when `start` is called. Otherwise, or if [:0:]
    * is passed as [port], the server will start in an ephemeral port picked
    * by the system.
+   *
+   * [https] defines whether the server will use TLS, if [https] is [:true:]
+   * you may want to use the trusted cert provided with the library in your
+   * [SecurityContext]. See
+   * [package:mock_web_server/certificates/trusted_certs.pem] or take a look at
+   * this project TLS tests to see a simple implementation.
+   *
+   * [addressType] allows you to decide if the Internet Address should be IPv4 or
+   * IPv6. If [:IP_V4:] is used, then the address will be [:127.0.0.1:], if [:IP_V6]
+   * is used the address will be [:::1:]
    */
-  MockWebServer({this.port: 0});
+  MockWebServer(
+      {port: 0, https: false, addressType: InternetAddressType.IP_V4}) {
+    _port = port;
+    _https = https;
+    _addressType = addressType;
+  }
 
   /**
    * Starts the server. If a `port` was passed when the instance was created,
@@ -121,10 +138,28 @@ class MockWebServer {
    * port.
    */
   start() async {
-    _server = await HttpServer.bind(InternetAddress.LOOPBACK_IP_V4, port);
-    port = _server.port;
-    host = _server.address.host;
-    url = "http://$host:$port/";
+    InternetAddress address = _addressType == InternetAddressType.IP_V4
+        ? InternetAddress.LOOPBACK_IP_V4
+        : InternetAddress.LOOPBACK_IP_V6;
+
+    if (_https) {
+      var chainRes =
+          new Resource('package:mock_web_server/certificates/server_chain.pem');
+      List<int> chain = await chainRes.readAsBytes();
+
+      var keyRes =
+          new Resource('package:mock_web_server/certificates/server_key.pem');
+      List<int> key = await keyRes.readAsBytes();
+
+      SecurityContext context = new SecurityContext()
+        ..useCertificateChainBytes(chain)
+        ..usePrivateKeyBytes(key, password: 'dartdart');
+
+      _server = await HttpServer.bindSecure(address, _port, context);
+    } else {
+      _server = await HttpServer.bind(address, _port);
+    }
+
     _serve();
   }
 
@@ -164,6 +199,13 @@ class MockWebServer {
     _requests.removeLast();
 
     return request;
+  }
+
+  /**
+   * Stop the `MockWebServer`
+   */
+  shutdown() {
+    _server.close();
   }
 
   /**
@@ -217,12 +259,5 @@ class MockWebServer {
       ..statusCode = response.httpCode
       ..write(response.body)
       ..close();
-  }
-
-  /**
-   * Stop the `MockWebServer`
-   */
-  shutdown() {
-    _server.close();
   }
 }

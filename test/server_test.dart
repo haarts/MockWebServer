@@ -19,6 +19,7 @@ import 'package:test/test.dart';
 import 'dart:io';
 import 'dart:async';
 import 'dart:convert';
+import 'package:resource/resource.dart' show Resource;
 
 MockWebServer _server;
 
@@ -161,7 +162,7 @@ void main() {
     expect(response.statusCode, 201);
   });
 
-  test('paralel delay', () async {
+  test('Parallel delay', () async {
     String body70 = "70 milliseconds";
     String body40 = "40 milliseconds";
     String body20 = "20 milliseconds";
@@ -172,12 +173,14 @@ void main() {
     Completer completer = new Completer();
     List<String> responses = new List();
 
-    _get("").then((res) async { // 40 milliseconds
+    _get("").then((res) async {
+      // 40 milliseconds
       String result = await _read(res);
       responses.add(result);
     });
 
-    _get("").then((res) async { // 70 milliseconds
+    _get("").then((res) async {
+      // 70 milliseconds
       String result = await _read(res);
       responses.add(result);
 
@@ -185,7 +188,8 @@ void main() {
       completer.complete();
     });
 
-    _get("").then((res) async { // 20 milliseconds
+    _get("").then((res) async {
+      // 20 milliseconds
       String result = await _read(res);
       responses.add(result);
     });
@@ -196,6 +200,79 @@ void main() {
     expect(responses[0], body20);
     expect(responses[1], body40);
     expect(responses[2], body70);
+  });
+
+  test("Request specific port IPv4", () async {
+    MockWebServer _server = new MockWebServer(port: 8029);
+    await _server.start();
+
+    RegExp url = new RegExp(r'(?:http[s]?:\/\/(?:127\.0\.0\.1):8029\/)');
+    RegExp host = new RegExp(r'(?:127\.0\.0\.1)');
+
+    expect(url.hasMatch(_server.url), true);
+    expect(host.hasMatch(_server.host), true);
+    expect(_server.port, 8029);
+
+    _server.shutdown();
+  });
+
+  test("Request specific port IPv6", () async {
+    MockWebServer _server =
+        new MockWebServer(port: 8030, addressType: InternetAddressType.IP_V6);
+    await _server.start();
+
+    RegExp url = new RegExp(r'(?:http[s]?:\/\/(?:::1):8030\/)');
+    RegExp host = new RegExp(r'(?:::1)');
+
+    expect(url.hasMatch(_server.url), true);
+    expect(host.hasMatch(_server.host), true);
+    expect(_server.port, 8030);
+
+    _server.shutdown();
+  });
+
+  test("TLS info", () async {
+    MockWebServer _server = new MockWebServer(port: 8029, https: true);
+    await _server.start();
+
+    RegExp url = new RegExp(r'(?:https:\/\/(?:127\.0\.0\.1):8029\/)');
+    RegExp host = new RegExp(r'(?:127\.0\.0\.1)');
+
+    expect(url.hasMatch(_server.url), true);
+    expect(host.hasMatch(_server.host), true);
+    expect(_server.port, 8029);
+
+    _server.shutdown();
+  });
+
+  test("TLS cert", () async {
+    String body = "S03E08 You Are Not Safe";
+
+    MockWebServer _server = new MockWebServer(port: 8029, https: true);
+    await _server.start();
+    _server.enqueue(body: body);
+
+    var certRes =
+        new Resource('package:mock_web_server/certificates/trusted_certs.pem');
+    List<int> cert = await certRes.readAsBytes();
+
+    // Calling without the proper security context
+    var clientErr = new HttpClient();
+
+    expect(clientErr.getUrl(Uri.parse(_server.url)),
+        throwsA(new isInstanceOf<HandshakeException>()));
+
+    // Testing with security context
+    SecurityContext clientContext = new SecurityContext()
+      ..setTrustedCertificatesBytes(cert);
+
+    var client = new HttpClient(context: clientContext);
+    var request = await client.getUrl(Uri.parse(_server.url));
+    String response = await _read(await request.close());
+
+    expect(response, body);
+
+    _server.shutdown();
   });
 }
 
