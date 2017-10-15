@@ -98,6 +98,15 @@ void main() {
     expect(_server.requestCount, 3);
   });
 
+  test("Request count", () async {
+    _server.enqueue(httpCode: HttpStatus.UNAUTHORIZED);
+
+    await _get("first");
+
+    expect(_server.takeRequest().uri.path, "/first");
+    expect(_server.requestCount, 1);
+  });
+
   test("Dispatcher", () async {
     var dispatcher = (HttpRequest request) {
       if (request.uri.path == "/users") {
