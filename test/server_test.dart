@@ -232,7 +232,21 @@ void main() {
   });
 
   test("TLS info", () async {
-    MockWebServer _server = new MockWebServer(port: 8029, https: true);
+    var chainRes =
+        new Resource('package:mock_web_server/certificates/server_chain.pem');
+    List<int> chain = await chainRes.readAsBytes();
+
+    var keyRes =
+        new Resource('package:mock_web_server/certificates/server_key.pem');
+    List<int> key = await keyRes.readAsBytes();
+
+    Certificate certificate = new Certificate()
+      ..password = "dartdart"
+      ..key = key
+      ..chain = chain;
+
+    MockWebServer _server =
+        new MockWebServer(port: 8029, certificate: certificate);
     await _server.start();
 
     RegExp url = new RegExp(r'(?:https:\/\/(?:127\.0\.0\.1):8029\/)');
@@ -248,7 +262,21 @@ void main() {
   test("TLS cert", () async {
     String body = "S03E08 You Are Not Safe";
 
-    MockWebServer _server = new MockWebServer(port: 8029, https: true);
+    var chainRes =
+        new Resource('package:mock_web_server/certificates/server_chain.pem');
+    List<int> chain = await chainRes.readAsBytes();
+
+    var keyRes =
+        new Resource('package:mock_web_server/certificates/server_key.pem');
+    List<int> key = await keyRes.readAsBytes();
+
+    Certificate certificate = new Certificate()
+      ..password = "dartdart"
+      ..key = key
+      ..chain = chain;
+
+    MockWebServer _server =
+        new MockWebServer(port: 8029, certificate: certificate);
     await _server.start();
     _server.enqueue(body: body);
 
