@@ -56,6 +56,10 @@ class MockResponse {
   Duration delay;
 }
 
+/**
+ * Represents a TLS certificate. `chain` and `key` are expected to be the bytes
+ * of the file to not add any dependency on how to read the file.
+ */
 class Certificate {
   List<int> chain;
   List<int> key;
@@ -98,14 +102,14 @@ class MockWebServer {
   String get url => "${_https ? "https" : "http"}://$host:$port/";
 
   /**
+   * Amount of requests that the server has received.
+   */
+  int get requestCount => _requestCount;
+
+  /**
    * Set this if using the queue is not enough for your requirements.
    */
   Dispatcher dispatcher;
-
-  /**
-   * Amount of requests that the server has received.
-   */
-  int requestCount = 0;
 
   HttpServer _server;
   List<MockResponse> _responses = [];
@@ -114,6 +118,7 @@ class MockWebServer {
   bool _https = false;
   Certificate _certificate;
   InternetAddressType _addressType;
+  int _requestCount = 0;
 
   /**
    * Creates an instance of a `MockWebServer`. If a [port] is defined, it
@@ -216,7 +221,7 @@ class MockWebServer {
    */
   _serve() async {
     await for (HttpRequest request in _server) {
-      requestCount++;
+      _requestCount++;
       _requests.add(request);
 
       if (dispatcher != null) {

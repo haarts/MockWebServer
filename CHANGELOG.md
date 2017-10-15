@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.0.1 - Oct 15, 2017
+- Better request count management to avoid external modifications
+
 ## 2.0.0 - Oct 15, 2017
 ### Breaking
 - Support for TLS now receives the cert config for better flexibility
