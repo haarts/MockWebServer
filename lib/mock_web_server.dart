@@ -16,7 +16,6 @@
 
 import 'dart:io';
 import 'dart:async';
-import 'package:resource/resource.dart' show Resource;
 
 /**
  * A `Dispatcher` is used to customize the responses of the `MockWebServer`
@@ -55,6 +54,12 @@ class MockResponse {
   int httpCode;
   Map<String, String> headers;
   Duration delay;
+}
+
+class Certificate {
+  List<int> chain;
+  List<int> key;
+  String password;
 }
 
 /**
@@ -106,7 +111,8 @@ class MockWebServer {
   List<MockResponse> _responses = [];
   List<HttpRequest> _requests = [];
   int _port;
-  bool _https;
+  bool _https = false;
+  Certificate _certificate;
   InternetAddressType _addressType;
 
   /**
@@ -126,9 +132,14 @@ class MockWebServer {
    * is used the address will be [:::1:]
    */
   MockWebServer(
-      {port: 0, https: false, addressType: InternetAddressType.IP_V4}) {
+      {port: 0,
+      Certificate certificate,
+      addressType: InternetAddressType.IP_V4}) {
     _port = port;
-    _https = https;
+    if (certificate != null) {
+      _https = true;
+      _certificate = certificate;
+    }
     _addressType = addressType;
   }
 
@@ -143,17 +154,9 @@ class MockWebServer {
         : InternetAddress.LOOPBACK_IP_V6;
 
     if (_https) {
-      var chainRes =
-          new Resource('package:mock_web_server/certificates/server_chain.pem');
-      List<int> chain = await chainRes.readAsBytes();
-
-      var keyRes =
-          new Resource('package:mock_web_server/certificates/server_key.pem');
-      List<int> key = await keyRes.readAsBytes();
-
       SecurityContext context = new SecurityContext()
-        ..useCertificateChainBytes(chain)
-        ..usePrivateKeyBytes(key, password: 'dartdart');
+        ..useCertificateChainBytes(_certificate.chain)
+        ..usePrivateKeyBytes(_certificate.key, password: _certificate.password);
 
       _server = await HttpServer.bindSecure(address, _port, context);
     } else {

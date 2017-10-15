@@ -139,23 +139,38 @@ expect(response.statusCode, 201);
 ```
 
 ### TLS
-Starting 1.3.0, you can start the server for TLS testing by passing the `https` flag 
-as `true` when creating the instance of MockWebServer.
+You can start the server using TLS by passing the `certificate` parameter 
+when creating the instance of MockWebServer. For example using the included certificates and the
+`resource` library you would do
 
 ```dart
-MockWebServer _server = new MockWebServer(https: true);
+var chainRes =
+    new Resource('package:mock_web_server/certificates/server_chain.pem');
+List<int> chain = await chainRes.readAsBytes();
+
+var keyRes =
+    new Resource('package:mock_web_server/certificates/server_key.pem');
+List<int> key = await keyRes.readAsBytes();
+
+Certificate certificate = new Certificate()
+  ..password = "dartdart"
+  ..key = key
+  ..chain = chain;
+
+MockWebServer _server =
+    new MockWebServer(certificate: certificate);
 ```
 
-If you do so, and your client validates that the certs are valid, you will need to use a
+If you do so, and your client validates the certs, you will need to use a
 proper `SecurityContext`, for example using the included `trusted_certs.pem`
 
 ```dart
 var certRes =
-        new Resource('package:mock_web_server/certificates/trusted_certs.pem');
+    new Resource('package:mock_web_server/certificates/trusted_certs.pem');
 List<int> cert = await certRes.readAsBytes();
 
 SecurityContext clientContext = new SecurityContext()
-       ..setTrustedCertificatesBytes(cert);
+   ..setTrustedCertificatesBytes(cert);
     
 var client = new HttpClient(context: clientContext);
 
