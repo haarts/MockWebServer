@@ -14,8 +14,10 @@
  * limitations under the License.
  */
 
+import 'dart:convert';
 import 'dart:io';
 import 'dart:async';
+import 'dart:collection';
 
 /**
  * A `Dispatcher` is used to customize the responses of the `MockWebServer`
@@ -54,6 +56,16 @@ class MockResponse {
   int httpCode;
   Map<String, String> headers;
   Duration delay;
+}
+
+/**
+ * Contains the info of a request received by the MockWebServer instance.
+ */
+class StoredRequest {
+  String body;
+  String method;
+  Uri uri;
+  Map<String, String> headers;
 }
 
 /**
@@ -112,8 +124,8 @@ class MockWebServer {
   Dispatcher dispatcher;
 
   HttpServer _server;
-  List<MockResponse> _responses = [];
-  List<HttpRequest> _requests = [];
+  Queue<MockResponse> _responses = new Queue();
+  Queue<StoredRequest> _requests = new Queue();
   int _port;
   bool _https = false;
   Certificate _certificate;
@@ -199,11 +211,11 @@ class MockWebServer {
    * Returns the most recent request that was received by the server. Will
    * throw an exception if there aren't any requests available.
    */
-  HttpRequest takeRequest() {
+  StoredRequest takeRequest() {
     if (_requests.isEmpty) {
       throw new Exception("No requests on record");
     }
-    var request = _requests[_requests.length - 1];
+    var request = _requests.last;
     _requests.removeLast();
 
     return request;
@@ -222,7 +234,7 @@ class MockWebServer {
   _serve() async {
     await for (HttpRequest request in _server) {
       _requestCount++;
-      _requests.add(request);
+      _requests.add(await _toStoredRequest(request));
 
       if (dispatcher != null) {
         assert(dispatcher is Dispatcher);
@@ -235,11 +247,37 @@ class MockWebServer {
         throw new Exception("No responses in queue");
       }
 
-      var response = _responses[0];
-      _responses.removeAt(0);
+      var response = _responses.first;
+      _responses.removeFirst();
 
       _process(request, response);
     }
+  }
+
+  /**
+   * Transform an [HttpRequest] into a [StoredRequest]
+   */
+  Future<StoredRequest> _toStoredRequest(HttpRequest request) async {
+    Map<String, String> headers = new Map();
+
+    StringBuffer body = new StringBuffer();
+    Completer<String> completer = new Completer();
+
+    request.transform(UTF8.decoder).listen((data) {
+      body.write(data);
+    }, onDone: () {
+      completer.complete(body.toString());
+    });
+
+    request.headers.forEach((key, values) {
+      headers[key] = values.join(", ");
+    });
+
+    return new StoredRequest()
+      ..method = request.method
+      ..headers = headers
+      ..uri = request.uri
+      ..body = await completer.future;
   }
 
   /**

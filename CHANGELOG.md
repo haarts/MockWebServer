@@ -1,6 +1,13 @@
 # Changelog
 
+## 2.1.0 - Oct 21, 2017
+### Changed
+- Using a MockWebServer class to return the stored requests
+- Loading the body of stored requests to facilitate validation
+- Using a queue
+
 ## 2.0.1 - Oct 15, 2017
+### Changed
 - Better request count management to avoid external modifications
 
 ## 2.0.0 - Oct 15, 2017

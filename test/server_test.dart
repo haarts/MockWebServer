@@ -311,6 +311,24 @@ void main() {
 
     _server.shutdown();
   });
+
+  test("Check take response", () async {
+    _server.enqueue();
+
+    HttpClient client = new HttpClient();
+    HttpClientRequest request =
+        await client.post(_server.host, _server.port, "test");
+    request.headers.add("x-header", "nosniff");
+    request.write("sample body");
+
+    await request.close();
+    StoredRequest storedRequest = _server.takeRequest();
+
+    expect(storedRequest.method, "POST");
+    expect(storedRequest.body, "sample body");
+    expect(storedRequest.uri.path, "/test");
+    expect(storedRequest.headers['x-header'], "nosniff");
+  });
 }
 
 _get(String path) async {
