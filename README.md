@@ -101,10 +101,10 @@ request(path: "third");
 
 // takeRequest is LIFO
 // You should probably assign takeRequest() to a var so that you can 
-// validate multiple things. takeRequest() returns an HttpRequest of dart:io
+// validate multiple things.
 expect(server.takeRequest().uri.path, "/third");
-expect(server.takeRequest().uri.path, "/second");
-expect(server.takeRequest().uri.path, "/first");
+expect(server.takeRequest().method, "GET");
+expect(server.takeRequest().headers['x-header'], "nosniff");
 ```
 
 ### Using a dispatcher for fine-grained routing
