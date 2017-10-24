@@ -1,0 +1,8 @@
+image: google/dart:latest
+
+before_script:
+  - pub get
+
+test_async:
+  script:
+   - pub run test
