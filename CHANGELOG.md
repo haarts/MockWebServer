@@ -1,5 +1,13 @@
 # Changelog
 
+## 3.0.0 - Nov 27, 2018
+### Changed
+- Updated code to support Dart 2
+- Added SDK constraint to Dart 2
+
+## Breaking
+- Dart 2 is required
+
 ## 2.1.0 - Oct 21, 2017
 ### Changed
 - Using a MockWebServer class to return the stored requests
