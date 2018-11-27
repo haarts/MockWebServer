@@ -99,7 +99,7 @@ void main() {
   });
 
   test("Request count", () async {
-    _server.enqueue(httpCode: HttpStatus.UNAUTHORIZED);
+    _server.enqueue(httpCode: HttpStatus.unauthorized);
 
     await _get("first");
 
@@ -108,7 +108,7 @@ void main() {
   });
 
   test("Dispatcher", () async {
-    var dispatcher = (HttpRequest request) {
+    var dispatcher = (HttpRequest request) async {
       if (request.uri.path == "/users") {
         return new MockResponse()
           ..httpCode = 200
@@ -227,7 +227,7 @@ void main() {
 
   test("Request specific port IPv6", () async {
     MockWebServer _server =
-        new MockWebServer(port: 8030, addressType: InternetAddressType.IP_V6);
+        new MockWebServer(port: 8030, addressType: InternetAddressType.IPv6);
     await _server.start();
 
     RegExp url = new RegExp(r'(?:http[s]?:\/\/(?:::1):8030\/)');
@@ -297,7 +297,7 @@ void main() {
     var clientErr = new HttpClient();
 
     expect(clientErr.getUrl(Uri.parse(_server.url)),
-        throwsA(new isInstanceOf<HandshakeException>()));
+        throwsA(new TypeMatcher<HandshakeException>()));
 
     // Testing with security context
     SecurityContext clientContext = new SecurityContext()
@@ -342,7 +342,7 @@ Future<String> _read(HttpClientResponse response) async {
   StringBuffer body = new StringBuffer();
   Completer<String> completer = new Completer();
 
-  response.transform(UTF8.decoder).listen((data) {
+  response.transform(utf8.decoder).listen((data) {
     body.write(data);
   }, onDone: () {
     completer.complete(body.toString());

@@ -151,7 +151,7 @@ class MockWebServer {
   MockWebServer(
       {port: 0,
       Certificate certificate,
-      addressType: InternetAddressType.IP_V4}) {
+      addressType: InternetAddressType.IPv4}) {
     _port = port;
     if (certificate != null) {
       _https = true;
@@ -166,9 +166,9 @@ class MockWebServer {
    * port.
    */
   start() async {
-    InternetAddress address = _addressType == InternetAddressType.IP_V4
-        ? InternetAddress.LOOPBACK_IP_V4
-        : InternetAddress.LOOPBACK_IP_V6;
+    InternetAddress address = _addressType == InternetAddressType.IPv4
+        ? InternetAddress.loopbackIPv4
+        : InternetAddress.loopbackIPv6;
 
     if (_https) {
       SecurityContext context = new SecurityContext()
@@ -263,7 +263,7 @@ class MockWebServer {
     StringBuffer body = new StringBuffer();
     Completer<String> completer = new Completer();
 
-    request.transform(UTF8.decoder).listen((data) {
+    request.transform(utf8.decoder).listen((data) {
       body.write(data);
     }, onDone: () {
       completer.complete(body.toString());
