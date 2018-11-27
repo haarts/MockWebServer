@@ -1,9 +1,9 @@
 name: mock_web_server
-version: 2.1.0
+version: 3.0.0
 description: Versatile scriptable Web Server for real integration tests
 author: Miguel Castiblanco <miguel@starcarr.co>
-homepage: https://gitlab.com/Starcarr/MockWebServer
+homepage: https://git.starcarr.co/Dart/MockWebServer
 
 dev_dependencies:
-  test: "0.12.24+2"
-  resource: ">=2.1.2 <3.0.0"
+  test: '>=1.5.1 <2.0.0'
+  resource: '>=2.1.5 <3.0.0'
