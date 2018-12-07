@@ -92,9 +92,9 @@ void main() {
     await _get("second");
     await _get("third");
 
-    expect(_server.takeRequest().uri.path, "/third");
-    expect(_server.takeRequest().uri.path, "/second");
     expect(_server.takeRequest().uri.path, "/first");
+    expect(_server.takeRequest().uri.path, "/second");
+    expect(_server.takeRequest().uri.path, "/third");
     expect(_server.requestCount, 3);
   });
 
