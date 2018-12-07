@@ -1,5 +1,11 @@
 # Changelog
 
+### 4.0.0 - Dec 06, 2018
+- Changed `takeRequest()` to be FIFO like Square's implementation
+
+## Breaking
+- All your tests need to be updated to use `takeRequest()` according to above
+
 ## 3.0.0 - Nov 27, 2018
 ### Changed
 - Updated code to support Dart 2

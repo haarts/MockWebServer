@@ -208,15 +208,15 @@ class MockWebServer {
   }
 
   /**
-   * Returns the most recent request that was received by the server. Will
+   * Returns the requests received by the server, first in first out – FIFO. Will
    * throw an exception if there aren't any requests available.
    */
   StoredRequest takeRequest() {
     if (_requests.isEmpty) {
       throw new Exception("No requests on record");
     }
-    var request = _requests.last;
-    _requests.removeLast();
+    var request = _requests.first;
+    _requests.removeFirst();
 
     return request;
   }

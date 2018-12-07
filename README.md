@@ -100,12 +100,12 @@ request(path: "first");
 request(path: "second");
 request(path: "third");
 
-// takeRequest is LIFO
+// takeRequest is FIFO
 // You should probably assign takeRequest() to a var so that you can 
 // validate multiple things.
-expect(server.takeRequest().uri.path, "/third");
-expect(server.takeRequest().method, "GET");
 expect(server.takeRequest().headers['x-header'], "nosniff");
+expect(server.takeRequest().method, "GET");
+expect(server.takeRequest().uri.path, "/third");
 ```
 
 ### Using a dispatcher for fine-grained routing
