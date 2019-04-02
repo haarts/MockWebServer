@@ -20,6 +20,8 @@ import 'dart:io';
 import 'dart:async';
 import 'dart:convert';
 import 'package:resource/resource.dart' show Resource;
+import 'package:web_socket_channel/web_socket_channel.dart';
+import 'package:web_socket_channel/io.dart';
 
 MockWebServer _server;
 
@@ -335,6 +337,90 @@ void main() {
 
     var response = await _get("");
     expect(response.statusCode, 404);
+  });
+
+  group("WebSockets", () {
+    String url;
+
+    setUp(() {
+      url = "ws://${_server.host}:${_server.port}/ws";
+    });
+
+    test("Set single response", () async {
+      _server.enqueue(body: "some response");
+
+      final channel = IOWebSocketChannel.connect(url);
+      channel.sink.add("initial message (mandatory)");
+      var fut = channel.stream.listen((message) {
+        expect(message, equals("some response"));
+      }).asFuture();
+      await fut;
+
+      StoredRequest storedRequest = _server.takeRequest();
+      expect(storedRequest.uri.path, "/ws");
+    });
+
+    test("Set multiple responses", () async {
+      _server.enqueue(body: "response 1");
+      _server.enqueue(body: "response 2");
+
+      // NOTE responses are popped from the end therefor this seems reversed.
+      List<void Function(String)> expectations = [
+        (message) => expect(message, equals("response 2")),
+        (message) => expect(message, equals("response 1")),
+      ];
+
+      final channel = IOWebSocketChannel.connect(url);
+      channel.sink.add("initial message (mandatory)");
+      var fut = channel.stream.listen((message) {
+        expectations.removeLast()(message);
+        channel.sink.add("next message please");
+      }).asFuture();
+      await fut;
+    });
+
+    test("Set delay", () async {
+      _server.enqueue(
+          body: "some response", delay: Duration(milliseconds: 1500));
+
+      Stopwatch stopwatch = Stopwatch()..start();
+
+      final channel = IOWebSocketChannel.connect(url);
+      channel.sink.add("initial message (mandatory)");
+      var fut = channel.stream.listen((message) {
+        stopwatch.stop();
+      }).asFuture();
+      await fut;
+
+      expect(stopwatch.elapsed.inMilliseconds,
+          greaterThanOrEqualTo(Duration(milliseconds: 1500).inMilliseconds));
+    });
+
+    test("Use a message generator", () async {
+      _server.messageGenerator = (IOWebSocketChannel channel) async {
+          await Future.delayed(Duration(seconds: 1), () => channel.sink.add("first"));
+          await Future.delayed(Duration(seconds: 1), () => channel.sink.add("second"));
+          await Future.delayed(Duration(seconds: 1), () => channel.sink.add("third"));
+          channel.sink.close();
+      };
+
+      List<void Function(String)> expectations = [
+        (message) => expect(message, equals("third")),
+        (message) => expect(message, equals("second")),
+        (message) => expect(message, equals("first")),
+      ];
+
+      final channel = IOWebSocketChannel.connect(url);
+      var fut = channel.stream.listen((message) {
+        expectations.removeLast()(message);
+      }).asFuture();
+      await fut;
+    });
+
+    test("Set close code", () async {}, skip: "TODO");
+    test("Set close reason", () async {}, skip: "TODO");
+    test("Set greeting", () async {}, skip: "TODO");
+    test("Repeated connections", () async {}, skip: "TODO");
   });
 }
 

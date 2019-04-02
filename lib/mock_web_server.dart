@@ -18,6 +18,10 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:async';
 import 'dart:collection';
+import 'package:web_socket_channel/io.dart';
+
+/// MessageGenerator
+typedef MessageGenerator = void Function(IOWebSocketChannel);
 
 /// A `Dispatcher` is used to customize the responses of the `MockWebServer`
 /// further than using a queue.
@@ -105,6 +109,8 @@ class MockWebServer {
   /// Default response if there's nothing on the queue and no dispatcher
   MockResponse defaultResponse;
 
+  MessageGenerator messageGenerator;
+
   HttpServer _server;
   Queue<MockResponse> _responses = new Queue();
   Queue<StoredRequest> _requests = new Queue();
@@ -113,6 +119,7 @@ class MockWebServer {
   Certificate _certificate;
   InternetAddressType _addressType;
   int _requestCount = 0;
+  final String _webSocketEndpoint = '/ws';
 
   /// Creates an instance of a `MockWebServer`. If a [port] is defined, it
   /// will be used when `start` is called. Otherwise, or if [:0:]
@@ -204,26 +211,63 @@ class MockWebServer {
       _requestCount++;
       _requests.add(await _toStoredRequest(request));
 
-      if (dispatcher != null) {
-        assert(dispatcher is Dispatcher);
-        MockResponse response = await dispatcher(request);
-        _process(request, response);
-        continue;
+      if (request.uri.path == _webSocketEndpoint) {
+        _handleWebsocketRequest(request);
+      } else {
+        _handleHttpRequest(request);
       }
-
-      if (_responses.isEmpty && defaultResponse == null) {
-        throw new Exception("No responses in queue and no default response");
-      }
-
-      var response = defaultResponse;
-
-      if (_responses.isNotEmpty) {
-        response = _responses.first;
-        _responses.removeFirst();
-      }
-
-      _process(request, response);
     }
+  }
+
+  /// Take a request and upgrade it to a WebSocket. The conversation with the
+  /// client is still a simple request/response afair unless otherwise
+  /// configured.
+  void _handleWebsocketRequest(HttpRequest request) async {
+    WebSocket webSocket = await WebSocketTransformer.upgrade(request);
+    var channel = IOWebSocketChannel(webSocket);
+    if (messageGenerator != null) {
+      messageGenerator(channel);
+    } else {
+      // NOTE Who should start sending messages first? If it is the server a
+      // message should be added to the sink now.
+      // channel.sink.add('some initial message');
+      await for (var message in channel.stream) {
+        MockResponse response = _responses.removeFirst();
+        var sendResponse = () => channel.sink.add(response.body);
+        if (response.delay != null) {
+          await Future.delayed(response.delay, sendResponse);
+        } else {
+          sendResponse();
+        }
+        // FIXME Closing the channel is mandatory otherwise the tests hang
+        if (_responses.length == 0) {
+          channel.sink.close();
+        }
+      }
+    }
+  }
+
+  /// Take a regular HTTP request and process it
+  void _handleHttpRequest(HttpRequest request) async {
+    if (dispatcher != null) {
+      assert(dispatcher is Dispatcher);
+      MockResponse response = await dispatcher(request);
+      _process(request, response);
+      return;
+    }
+
+    if (_responses.isEmpty && defaultResponse == null) {
+      throw new Exception("No responses in queue and no default response");
+    }
+
+    var response = defaultResponse;
+
+    if (_responses.isNotEmpty) {
+      response = _responses.first;
+      _responses.removeFirst();
+    }
+
+    _process(request, response);
   }
 
   /// Transform an [HttpRequest] into a [StoredRequest]
