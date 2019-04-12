@@ -229,21 +229,25 @@ class MockWebServer {
       await messageGenerator(channel.sink);
       channel.sink.close();
     } else {
-      // NOTE Who should start sending messages first? If it is the server a
-      // message should be added to the sink now.
-      // channel.sink.add('some initial message');
-      await for (var message in channel.stream) {
-        MockResponse response = _responses.removeFirst();
-        var sendResponse = () => channel.sink.add(response.body);
-        if (response.delay != null) {
-          await Future.delayed(response.delay, sendResponse);
-        } else {
-          sendResponse();
-        }
-        // FIXME Closing the channel is mandatory otherwise the tests hang
-        if (_responses.length == 0) {
-          channel.sink.close();
-        }
+      _withResponseQueue(channel);
+    }
+  }
+
+  void _withResponseQueue(IOWebSocketChannel channel) async {
+    // NOTE Who should start sending messages first? If it is the server a
+    // message should be added to the sink now.
+    // channel.sink.add('some initial message');
+    await for (var message in channel.stream) {
+      MockResponse response = _responses.removeFirst();
+      var sendResponse = () => channel.sink.add(response.body);
+      if (response.delay != null) {
+        await Future.delayed(response.delay, sendResponse);
+      } else {
+        sendResponse();
+      }
+      // NOTE Closing the channel is mandatory otherwise the tests hang
+      if (_responses.length == 0) {
+        channel.sink.close();
       }
     }
   }
