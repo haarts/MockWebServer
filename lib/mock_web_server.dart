@@ -212,7 +212,7 @@ class MockWebServer {
       _requests.add(await _toStoredRequest(request));
 
       if (request.uri.path == _webSocketEndpoint) {
-        _handleWebsocketRequest(request);
+        _handleWebSocketRequest(request);
       } else {
         _handleHttpRequest(request);
       }
@@ -222,7 +222,7 @@ class MockWebServer {
   /// Take a request and upgrade it to a WebSocket. The conversation with the
   /// client is still a simple request/response afair unless otherwise
   /// configured.
-  void _handleWebsocketRequest(HttpRequest request) async {
+  void _handleWebSocketRequest(HttpRequest request) async {
     WebSocket webSocket = await WebSocketTransformer.upgrade(request);
     var channel = IOWebSocketChannel(webSocket);
     if (messageGenerator != null) {
