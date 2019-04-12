@@ -21,7 +21,7 @@ import 'dart:collection';
 import 'package:web_socket_channel/io.dart';
 
 /// MessageGenerator
-typedef MessageGenerator = void Function(IOWebSocketChannel);
+typedef MessageGenerator = void Function(StreamSink);
 
 /// A `Dispatcher` is used to customize the responses of the `MockWebServer`
 /// further than using a queue.
@@ -226,7 +226,8 @@ class MockWebServer {
     WebSocket webSocket = await WebSocketTransformer.upgrade(request);
     var channel = IOWebSocketChannel(webSocket);
     if (messageGenerator != null) {
-      messageGenerator(channel);
+      await messageGenerator(channel.sink);
+      channel.sink.close();
     } else {
       // NOTE Who should start sending messages first? If it is the server a
       // message should be added to the sink now.
