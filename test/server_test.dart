@@ -346,21 +346,17 @@ void main() {
       url = "ws://${_server.host}:${_server.port}/ws";
     });
 
-    test("Set single response", () async {
+    test("with single response", () async {
       _server.enqueue(body: "some response");
 
       final channel = IOWebSocketChannel.connect(url);
       channel.sink.add("initial message (mandatory)");
-      var fut = channel.stream.listen((message) {
+      channel.stream.listen(expectAsync1((message) {
         expect(message, equals("some response"));
-      }).asFuture();
-      await fut;
-
-      StoredRequest storedRequest = _server.takeRequest();
-      expect(storedRequest.uri.path, "/ws");
+      }));
     });
 
-    test("Set multiple responses", () async {
+    test("with multiple responses", () async {
       _server.enqueue(body: "response 1");
       _server.enqueue(body: "response 2");
 
@@ -372,36 +368,39 @@ void main() {
 
       final channel = IOWebSocketChannel.connect(url);
       channel.sink.add("initial message (mandatory)");
-      var fut = channel.stream.listen((message) {
+      channel.stream.listen(expectAsync1((message) {
         expectations.removeLast()(message);
-        channel.sink.add("next message please");
-      }).asFuture();
-      await fut;
+        if (expectations.length != 0) {
+          channel.sink.add("next message please");
+        }
+      }, count: 2));
     });
 
-    test("Set delay", () async {
+    test("with delayed response", () async {
       _server.enqueue(
           body: "some response", delay: Duration(milliseconds: 1500));
 
       Stopwatch stopwatch = Stopwatch()..start();
+      Completer c = Completer();
 
       final channel = IOWebSocketChannel.connect(url);
       channel.sink.add("initial message (mandatory)");
-      var fut = channel.stream.listen((message) {
-        stopwatch.stop();
-      }).asFuture();
-      await fut;
+      channel.stream.listen(expectAsync1((message) {
+        c.complete();
+      }));
+      await c.future;
 
+      stopwatch.stop();
       expect(stopwatch.elapsed.inMilliseconds,
           greaterThanOrEqualTo(Duration(milliseconds: 1500).inMilliseconds));
     });
 
-    test("Use a message generator", () async {
-      _server.messageGenerator = (IOWebSocketChannel channel) async {
-          await Future.delayed(Duration(seconds: 1), () => channel.sink.add("first"));
-          await Future.delayed(Duration(seconds: 1), () => channel.sink.add("second"));
-          await Future.delayed(Duration(seconds: 1), () => channel.sink.add("third"));
-          channel.sink.close();
+    test("with a message generator", () async {
+         // FIXME potentionally add Stream argument, what about closeCode and closeReason
+      _server.messageGenerator = (StreamSink sink) async {
+          await Future.delayed(Duration(seconds: 1), () => sink.add("first"));
+          await Future.delayed(Duration(seconds: 1), () => sink.add("second"));
+          await Future.delayed(Duration(seconds: 1), () => sink.add("third"));
       };
 
       List<void Function(String)> expectations = [
@@ -411,16 +410,15 @@ void main() {
       ];
 
       final channel = IOWebSocketChannel.connect(url);
-      var fut = channel.stream.listen((message) {
+      channel.stream.listen(expectAsync1((message) {
         expectations.removeLast()(message);
-      }).asFuture();
-      await fut;
+      }, count: 3));
     });
 
-    test("Set close code", () async {}, skip: "TODO");
-    test("Set close reason", () async {}, skip: "TODO");
-    test("Set greeting", () async {}, skip: "TODO");
-    test("Repeated connections", () async {}, skip: "TODO");
+    test("with close code", () async {}, skip: "TODO");
+    test("with close reason", () async {}, skip: "TODO");
+    test("with greeting", () async {}, skip: "TODO");
+    test("with repeated connections", () async {}, skip: "TODO");
   });
 }
 
