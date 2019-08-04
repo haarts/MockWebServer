@@ -19,38 +19,34 @@ import 'dart:io';
 import 'dart:async';
 import 'dart:collection';
 
-/**
- * A `Dispatcher` is used to customize the responses of the `MockWebServer`
- * further than using a queue.
- *
- * Using the `Dispatcher` will invalidate all the default response values
- * of the `MockWebServer` so be sure to set an `httpCode`.
- *
- * It is called with an `HttpRequest` object every time the `MockWebServer`
- * receives a request.
- *
- *   var dispatcher = (HttpRequest request) {
- *      if (request.uri.path == "/users") {
- *          return new MockResponse()
- *          ..httpCode = 200
- *          ..body = "working";
- *      } else if (request.uri.path == "/users/1") {
- *          return new MockResponse()..httpCode = 201;
- *      }
- *
- *      return new MockResponse()..httpCode = 404;
- *   };
- *
- *  _server.dispatcher = dispatcher;
- *
- */
+/// A `Dispatcher` is used to customize the responses of the `MockWebServer`
+/// further than using a queue.
+///
+/// Using the `Dispatcher` will invalidate all the default response values
+/// of the `MockWebServer` so be sure to set an `httpCode`.
+///
+/// It is called with an `HttpRequest` object every time the `MockWebServer`
+/// receives a request.
+///
+///   var dispatcher = (HttpRequest request) {
+///      if (request.uri.path == "/users") {
+///          return new MockResponse()
+///          ..httpCode = 200
+///          ..body = "working";
+///      } else if (request.uri.path == "/users/1") {
+///          return new MockResponse()..httpCode = 201;
+///      }
+///
+///      return new MockResponse()..httpCode = 404;
+///   };
+///
+///  _server.dispatcher = dispatcher;
+///
 typedef Future<MockResponse> Dispatcher(HttpRequest request);
 
-/**
- * Defines a set of values that the `MockWebServer` will return to a given
- * request. Used with `MockWebServer.enqueueResponse(MockResponse response)` or
- * a `Dispatcher`.
- */
+/// Defines a set of values that the `MockWebServer` will return to a given
+/// request. Used with `MockWebServer.enqueueResponse(MockResponse response)` or
+/// a `Dispatcher`.
 class MockResponse {
   Object body;
   int httpCode;
@@ -58,9 +54,7 @@ class MockResponse {
   Duration delay;
 }
 
-/**
- * Contains the info of a request received by the MockWebServer instance.
- */
+/// Contains the info of a request received by the MockWebServer instance.
 class StoredRequest {
   String body;
   String method;
@@ -68,60 +62,48 @@ class StoredRequest {
   Map<String, String> headers;
 }
 
-/**
- * Represents a TLS certificate. `chain` and `key` are expected to be the bytes
- * of the file to not add any dependency on how to read the file.
- */
+/// Represents a TLS certificate. `chain` and `key` are expected to be the bytes
+/// of the file to not add any dependency on how to read the file.
 class Certificate {
   List<int> chain;
   List<int> key;
   String password;
 }
 
-/**
- * A Web Server that can be scripted. Useful for Integration Tests, for demos,
- * and to reproduce edge cases.
- *
- *    _server = new MockWebServer();
- *    _server.start();
- *
- *    _server.enqueue(body: "Hello World", httpCode: 200);
- *
- * The simplest way of using the `MockWebServer` is to script the session with a
- * Queue. You can use `enqueue` and `enqueueResponse` for that. For a demo, a
- * tests with parallel requests, and other complicated scenarios than can't be
- * easily represented with just a queue, use a `Dispatcher`.
- */
+/// A Web Server that can be scripted. Useful for Integration Tests, for demos,
+/// and to reproduce edge cases.
+///
+///    _server = new MockWebServer();
+///    _server.start();
+///
+///    _server.enqueue(body: "Hello World", httpCode: 200);
+///
+/// The simplest way of using the `MockWebServer` is to script the session with a
+/// Queue. You can use `enqueue` and `enqueueResponse` for that. For a demo, a
+/// tests with parallel requests, and other complicated scenarios than can't be
+/// easily represented with just a queue, use a `Dispatcher`.
 class MockWebServer {
-  /**
-   * If the server has been started, returns the port in which the server
-   * is running. Will throw [NoSuchMethodError] if the server is not started.
-   */
+  /// If the server has been started, returns the port in which the server
+  /// is running. Will throw [NoSuchMethodError] if the server is not started.
   int get port => _server.port;
 
-  /**
-   * Returns the host of the server. [:127.0.0.1:] if the server is started
-   * with [:IPv4:], [:::1:] if it was started with [:IPv6:].
-   *
-   * Will throw [NoSuchMethodError] if the server is not started.
-   */
+  /// Returns the host of the server. [:127.0.0.1:] if the server is started
+  /// with [:IPv4:], [:::1:] if it was started with [:IPv6:].
+  /// Will throw [NoSuchMethodError] if the server is not started.
   String get host => _server.address.host;
 
-  /**
-   * Returns a String with the complete url to connect to the server. Will
-   * throw [NoSuchMethodError] if the server is not started.
-   */
+  /// Returns a String with the complete url to connect to the server. Will
+  /// throw [NoSuchMethodError] if the server is not started.
   String get url => "${_https ? "https" : "http"}://$host:$port/";
 
-  /**
-   * Amount of requests that the server has received.
-   */
+  /// Amount of requests that the server has received.
   int get requestCount => _requestCount;
 
-  /**
-   * Set this if using the queue is not enough for your requirements.
-   */
+  /// Set this if using the queue is not enough for your requirements.
   Dispatcher dispatcher;
+
+  /// Default response if there's nothing on the queue and no dispatcher
+  MockResponse defaultResponse;
 
   HttpServer _server;
   Queue<MockResponse> _responses = new Queue();
@@ -132,22 +114,20 @@ class MockWebServer {
   InternetAddressType _addressType;
   int _requestCount = 0;
 
-  /**
-   * Creates an instance of a `MockWebServer`. If a [port] is defined, it
-   * will be used when `start` is called. Otherwise, or if [:0:]
-   * is passed as [port], the server will start in an ephemeral port picked
-   * by the system.
-   *
-   * [https] defines whether the server will use TLS, if [https] is [:true:]
-   * you may want to use the trusted cert provided with the library in your
-   * [SecurityContext]. See
-   * [package:mock_web_server/certificates/trusted_certs.pem] or take a look at
-   * this project TLS tests to see a simple implementation.
-   *
-   * [addressType] allows you to decide if the Internet Address should be IPv4 or
-   * IPv6. If [:IP_V4:] is used, then the address will be [:127.0.0.1:], if [:IP_V6]
-   * is used the address will be [:::1:]
-   */
+  /// Creates an instance of a `MockWebServer`. If a [port] is defined, it
+  /// will be used when `start` is called. Otherwise, or if [:0:]
+  /// is passed as [port], the server will start in an ephemeral port picked
+  /// by the system.
+  ///
+  /// [https] defines whether the server will use TLS, if [https] is [:true:]
+  /// you may want to use the trusted cert provided with the library in your
+  /// [SecurityContext]. See
+  /// [package:mock_web_server/certificates/trusted_certs.pem] or take a look at
+  /// this project TLS tests to see a simple implementation.
+  ///
+  /// [addressType] allows you to decide if the Internet Address should be IPv4 or
+  /// IPv6. If [:IP_V4:] is used, then the address will be [:127.0.0.1:], if [:IP_V6]
+  /// is used the address will be [:::1:]
   MockWebServer(
       {port: 0,
       Certificate certificate,
@@ -160,11 +140,9 @@ class MockWebServer {
     _addressType = addressType;
   }
 
-  /**
-   * Starts the server. If a `port` was passed when the instance was created,
-   * it will try to bind to that `port`, otherwise it will pick any available
-   * port.
-   */
+  /// Starts the server. If a `port` was passed when the instance was created,
+  /// it will try to bind to that `port`, otherwise it will pick any available
+  /// port.
   start() async {
     InternetAddress address = _addressType == InternetAddressType.IPv4
         ? InternetAddress.loopbackIPv4
@@ -183,10 +161,8 @@ class MockWebServer {
     _serve();
   }
 
-  /**
-   * Creates a `MockResponse` with the passed parameters, and adds it to the
-   * queue. The queue is First In First Out (FIFO).
-   */
+  /// Creates a `MockResponse` with the passed parameters, and adds it to the
+  /// queue. The queue is First In First Out (FIFO).
   enqueue(
       {Object body: "",
       int httpCode: 200,
@@ -199,18 +175,14 @@ class MockWebServer {
       ..delay = delay);
   }
 
-  /**
-   * Adds the received `MockResponse` to the queue of responses of the server.
-   * The queue is FIFO.
-   */
+  /// Adds the received `MockResponse` to the queue of responses of the server.
+  /// The queue is FIFO.
   enqueueResponse(MockResponse response) {
     _responses.add(response);
   }
 
-  /**
-   * Returns the requests received by the server, first in first out – FIFO. Will
-   * throw an exception if there aren't any requests available.
-   */
+  /// Returns the requests received by the server, first in first out – FIFO. Will
+  /// throw an exception if there aren't any requests available.
   StoredRequest takeRequest() {
     if (_requests.isEmpty) {
       throw new Exception("No requests on record");
@@ -221,16 +193,12 @@ class MockWebServer {
     return request;
   }
 
-  /**
-   * Stop the `MockWebServer`
-   */
+  /// Stop the `MockWebServer`
   shutdown() {
     _server.close();
   }
 
-  /**
-   * Start to listen for and process requests
-   */
+  /// Start to listen for and process requests
   _serve() async {
     await for (HttpRequest request in _server) {
       _requestCount++;
@@ -243,20 +211,22 @@ class MockWebServer {
         continue;
       }
 
-      if (_responses.isEmpty) {
-        throw new Exception("No responses in queue");
+      if (_responses.isEmpty && defaultResponse == null) {
+        throw new Exception("No responses in queue and no default response");
       }
 
-      var response = _responses.first;
-      _responses.removeFirst();
+      var response = defaultResponse;
+
+      if (_responses.isNotEmpty) {
+        response = _responses.first;
+        _responses.removeFirst();
+      }
 
       _process(request, response);
     }
   }
 
-  /**
-   * Transform an [HttpRequest] into a [StoredRequest]
-   */
+  /// Transform an [HttpRequest] into a [StoredRequest]
   Future<StoredRequest> _toStoredRequest(HttpRequest request) async {
     Map<String, String> headers = new Map();
 
@@ -280,10 +250,8 @@ class MockWebServer {
       ..body = await completer.future;
   }
 
-  /**
-   * Take the [response] and write its values to the [request], effectively
-   * returning the response to the client.
-   */
+  /// Take the [response] and write its values to the [request], effectively
+  /// returning the response to the client.
   _process(HttpRequest request, MockResponse response) async {
     if (response.delay != null) {
       Completer completer = new Completer();

@@ -1,6 +1,9 @@
 # Changelog
 
-### 4.0.0 - Dec 06, 2018
+## 4.1.0 - Aug 04, 2019
+- Added `defaultResponse`
+
+## 4.0.0 - Dec 06, 2018
 - Changed `takeRequest()` to be FIFO like Square's implementation
 
 ## Breaking
