@@ -190,5 +190,14 @@ MockWebServer _server =
 
 ```
 
+### Setting a default response
+In some scenarions, if there's nothing on queue and there's no dispatcher, you
+may want the server to default to a response (e.g `404`) instead of throwing an
+exception.
+
+```dart
+_server.defaultResponse = MockResponse()..httpCode = 404;
+```
+
 ### Stopping
 During the `tearDown` of your tests you should stop the server. `server.shutdown()` will do.
