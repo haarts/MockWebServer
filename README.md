@@ -1,6 +1,4 @@
-# MockWebServer
-![build status](https://gitlab.com/Starcarr/MockWebServer/badges/master/build.svg)
-
+# mock_web_server
 A flexible Dart web server that can be used to script tests and web server interactions
 
 ## Summary
