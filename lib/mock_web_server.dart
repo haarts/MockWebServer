@@ -129,9 +129,9 @@ class MockWebServer {
   /// IPv6. If [:IP_V4:] is used, then the address will be [:127.0.0.1:], if [:IP_V6]
   /// is used the address will be [:::1:]
   MockWebServer(
-      {port: 0,
+      {port = 0,
       Certificate certificate,
-      addressType: InternetAddressType.IPv4}) {
+      addressType = InternetAddressType.IPv4}) {
     _port = port;
     if (certificate != null) {
       _https = true;
@@ -164,8 +164,8 @@ class MockWebServer {
   /// Creates a `MockResponse` with the passed parameters, and adds it to the
   /// queue. The queue is First In First Out (FIFO).
   enqueue(
-      {Object body: "",
-      int httpCode: 200,
+      {Object body = "",
+      int httpCode = 200,
       Map<String, String> headers,
       Duration delay}) {
     _responses.add(new MockResponse()
