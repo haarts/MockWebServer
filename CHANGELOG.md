@@ -1,5 +1,8 @@
 # Changelog
 
+## 4.1.1 - Sept 10, 2019
+- Added compatibility with Dart 2.5.0
+
 ## 4.1.0 - Aug 04, 2019
 - Added `defaultResponse`
 

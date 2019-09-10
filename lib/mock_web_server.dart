@@ -233,7 +233,7 @@ class MockWebServer {
     StringBuffer body = new StringBuffer();
     Completer<String> completer = new Completer();
 
-    request.transform(utf8.decoder).listen((data) {
+    utf8.decoder.bind(request).listen((data) {
       body.write(data);
     }, onDone: () {
       completer.complete(body.toString());
