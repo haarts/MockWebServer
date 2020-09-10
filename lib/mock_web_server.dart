@@ -14,14 +14,10 @@
  * limitations under the License.
  */
 
-import 'dart:convert';
-import 'dart:io';
 import 'dart:async';
 import 'dart:collection';
-import 'package:web_socket_channel/io.dart';
-
-/// MessageGenerator
-typedef MessageGenerator = void Function(StreamSink);
+import 'dart:convert';
+import 'dart:io';
 
 /// A `Dispatcher` is used to customize the responses of the `MockWebServer`
 /// further than using a queue.
@@ -46,7 +42,7 @@ typedef MessageGenerator = void Function(StreamSink);
 ///
 ///  _server.dispatcher = dispatcher;
 ///
-typedef Future<MockResponse> Dispatcher(HttpRequest request);
+typedef Dispatcher = Future<MockResponse> Function(StoredRequest request);
 
 /// Defines a set of values that the `MockWebServer` will return to a given
 /// request. Used with `MockWebServer.enqueueResponse(MockResponse response)` or
@@ -82,11 +78,37 @@ class Certificate {
 ///
 ///    _server.enqueue(body: "Hello World", httpCode: 200);
 ///
-/// The simplest way of using the `MockWebServer` is to script the session with a
-/// Queue. You can use `enqueue` and `enqueueResponse` for that. For a demo, a
+/// The simplest way of using the `MockWebServer` is to script the session with
+/// a Queue. You can use `enqueue` and `enqueueResponse` for that. For a demo, a
 /// tests with parallel requests, and other complicated scenarios than can't be
 /// easily represented with just a queue, use a `Dispatcher`.
 class MockWebServer {
+  /// Creates an instance of a `MockWebServer`. If a [port] is defined, it
+  /// will be used when `start` is called. Otherwise, or if [:0:]
+  /// is passed as [port], the server will start in an ephemeral port picked
+  /// by the system.
+  ///
+  /// [https] defines whether the server will use TLS, if [https] is [:true:]
+  /// you may want to use the trusted cert provided with the library in your
+  /// [SecurityContext]. See
+  /// [package:mock_web_server/certificates/trusted_certs.pem] or take a look at
+  /// this project TLS tests to see a simple implementation.
+  ///
+  /// [addressType] allows you to decide if the Internet Address should be IPv4
+  /// or IPv6. If [:IP_V4:] is used, then the address will be [:127.0.0.1:],
+  /// if [:IP_V6] is used the address will be [:::1:]
+  MockWebServer(
+      {int port = 0,
+      Certificate certificate,
+      InternetAddressType addressType = InternetAddressType.IPv4}) {
+    _port = port;
+    if (certificate != null) {
+      _https = true;
+      _certificate = certificate;
+    }
+    _addressType = addressType;
+  }
+
   /// If the server has been started, returns the port in which the server
   /// is running. Will throw [NoSuchMethodError] if the server is not started.
   int get port => _server.port;
@@ -109,54 +131,25 @@ class MockWebServer {
   /// Default response if there's nothing on the queue and no dispatcher
   MockResponse defaultResponse;
 
-  MessageGenerator messageGenerator;
-
   HttpServer _server;
-  Queue<MockResponse> _responses = new Queue();
-  Queue<StoredRequest> _requests = new Queue();
+  final Queue<MockResponse> _responses = Queue();
+  final Queue<StoredRequest> _requests = Queue();
   int _port;
   bool _https = false;
   Certificate _certificate;
   InternetAddressType _addressType;
   int _requestCount = 0;
-  final String _webSocketEndpoint = '/ws';
-
-  /// Creates an instance of a `MockWebServer`. If a [port] is defined, it
-  /// will be used when `start` is called. Otherwise, or if [:0:]
-  /// is passed as [port], the server will start in an ephemeral port picked
-  /// by the system.
-  ///
-  /// [https] defines whether the server will use TLS, if [https] is [:true:]
-  /// you may want to use the trusted cert provided with the library in your
-  /// [SecurityContext]. See
-  /// [package:mock_web_server/certificates/trusted_certs.pem] or take a look at
-  /// this project TLS tests to see a simple implementation.
-  ///
-  /// [addressType] allows you to decide if the Internet Address should be IPv4 or
-  /// IPv6. If [:IP_V4:] is used, then the address will be [:127.0.0.1:], if [:IP_V6]
-  /// is used the address will be [:::1:]
-  MockWebServer(
-      {port = 0,
-      Certificate certificate,
-      addressType = InternetAddressType.IPv4}) {
-    _port = port;
-    if (certificate != null) {
-      _https = true;
-      _certificate = certificate;
-    }
-    _addressType = addressType;
-  }
 
   /// Starts the server. If a `port` was passed when the instance was created,
   /// it will try to bind to that `port`, otherwise it will pick any available
   /// port.
-  start() async {
-    InternetAddress address = _addressType == InternetAddressType.IPv4
+  Future<void> start() async {
+    final InternetAddress address = _addressType == InternetAddressType.IPv4
         ? InternetAddress.loopbackIPv4
         : InternetAddress.loopbackIPv6;
 
     if (_https) {
-      SecurityContext context = new SecurityContext()
+      final SecurityContext context = SecurityContext()
         ..useCertificateChainBytes(_certificate.chain)
         ..usePrivateKeyBytes(_certificate.key, password: _certificate.password);
 
@@ -170,12 +163,12 @@ class MockWebServer {
 
   /// Creates a `MockResponse` with the passed parameters, and adds it to the
   /// queue. The queue is First In First Out (FIFO).
-  enqueue(
-      {Object body = "",
+  void enqueue(
+      {Object body = '',
       int httpCode = 200,
       Map<String, String> headers,
       Duration delay}) {
-    _responses.add(new MockResponse()
+    _responses.add(MockResponse()
       ..body = body
       ..headers = headers
       ..httpCode = httpCode
@@ -184,103 +177,62 @@ class MockWebServer {
 
   /// Adds the received `MockResponse` to the queue of responses of the server.
   /// The queue is FIFO.
-  enqueueResponse(MockResponse response) {
+  void enqueueResponse(MockResponse response) {
     _responses.add(response);
   }
 
-  /// Returns the requests received by the server, first in first out – FIFO. Will
-  /// throw an exception if there aren't any requests available.
+  /// Returns the requests received by the server, first in first out – FIFO.
+  /// Will throw an exception if there aren't any requests available.
   StoredRequest takeRequest() {
     if (_requests.isEmpty) {
-      throw new Exception("No requests on record");
+      throw Exception('No requests on record');
     }
-    var request = _requests.first;
+    final request = _requests.first;
     _requests.removeFirst();
 
     return request;
   }
 
   /// Stop the `MockWebServer`
-  shutdown() {
+  void shutdown() {
     _server.close();
   }
 
   /// Start to listen for and process requests
-  _serve() async {
-    await for (HttpRequest request in _server) {
+  Future<void> _serve() async {
+    await for (final HttpRequest request in _server) {
       _requestCount++;
-      _requests.add(await _toStoredRequest(request));
+      final storedRequest = await _toStoredRequest(request);
+      _requests.add(storedRequest);
 
-      if (request.uri.path == _webSocketEndpoint) {
-        _handleWebSocketRequest(request);
-      } else {
-        _handleHttpRequest(request);
+      if (dispatcher != null) {
+        assert(dispatcher is Dispatcher);
+        final MockResponse response = await dispatcher(storedRequest);
+        _process(request, response);
+        continue;
       }
-    }
-  }
 
-  /// Take a request and upgrade it to a WebSocket. The conversation with the
-  /// client is still a simple request/response afair unless otherwise
-  /// configured.
-  void _handleWebSocketRequest(HttpRequest request) async {
-    WebSocket webSocket = await WebSocketTransformer.upgrade(request);
-    var channel = IOWebSocketChannel(webSocket);
-    if (messageGenerator != null) {
-      await messageGenerator(channel.sink);
-      channel.sink.close();
-    } else {
-      _withResponseQueue(channel);
-    }
-  }
-
-  void _withResponseQueue(IOWebSocketChannel channel) async {
-    // NOTE Who should start sending messages first? If it is the server a
-    // message should be added to the sink now.
-    // channel.sink.add('some initial message');
-    await for (var message in channel.stream) {
-      MockResponse response = _responses.removeFirst();
-      var sendResponse = () => channel.sink.add(response.body);
-      if (response.delay != null) {
-        await Future.delayed(response.delay, sendResponse);
-      } else {
-        sendResponse();
+      if (_responses.isEmpty && defaultResponse == null) {
+        throw Exception('No responses in queue and no default response');
       }
-      // NOTE Closing the channel is mandatory otherwise the tests hang
-      if (_responses.length == 0) {
-        channel.sink.close();
-      }
-    }
-  }
 
-  /// Take a regular HTTP request and process it
-  void _handleHttpRequest(HttpRequest request) async {
-    if (dispatcher != null) {
-      assert(dispatcher is Dispatcher);
-      MockResponse response = await dispatcher(request);
+      var response = defaultResponse;
+
+      if (_responses.isNotEmpty) {
+        response = _responses.first;
+        _responses.removeFirst();
+      }
+
       _process(request, response);
-      return;
     }
-
-    if (_responses.isEmpty && defaultResponse == null) {
-      throw new Exception("No responses in queue and no default response");
-    }
-
-    var response = defaultResponse;
-
-    if (_responses.isNotEmpty) {
-      response = _responses.first;
-      _responses.removeFirst();
-    }
-
-    _process(request, response);
   }
 
   /// Transform an [HttpRequest] into a [StoredRequest]
   Future<StoredRequest> _toStoredRequest(HttpRequest request) async {
-    Map<String, String> headers = new Map();
+    final Map<String, String> headers = {};
 
-    StringBuffer body = new StringBuffer();
-    Completer<String> completer = new Completer();
+    final StringBuffer body = StringBuffer();
+    final Completer<String> completer = Completer();
 
     utf8.decoder.bind(request).listen((data) {
       body.write(data);
@@ -289,10 +241,10 @@ class MockWebServer {
     });
 
     request.headers.forEach((key, values) {
-      headers[key] = values.join(", ");
+      headers[key] = values.join(', ');
     });
 
-    return new StoredRequest()
+    return StoredRequest()
       ..method = request.method
       ..headers = headers
       ..uri = request.uri
@@ -301,11 +253,11 @@ class MockWebServer {
 
   /// Take the [response] and write its values to the [request], effectively
   /// returning the response to the client.
-  _process(HttpRequest request, MockResponse response) async {
+  Future<void> _process(HttpRequest request, MockResponse response) async {
     if (response.delay != null) {
-      Completer completer = new Completer();
+      final Completer completer = Completer<dynamic>();
 
-      new Timer(response.delay, () {
+      Timer(response.delay, () {
         completer.complete();
       });
 

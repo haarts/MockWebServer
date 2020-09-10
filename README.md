@@ -112,13 +112,15 @@ If you want more control than what the FIFO queue offers, you can set a dispatch
 the logic there.
 
 ```dart
-var dispatcher = (HttpRequest request) {
+var dispatcher = (StoredRequest request) {
   if (request.uri.path == "/users") {
     return new MockResponse()
       ..httpCode = 200
       ..body = "working";
   } else if (request.uri.path == "/users/1") {
     return new MockResponse()..httpCode = 201;
+  } else if (request.body.contains('Some User')) {
+    return new MockResponse()..httpCode = 200;
   }
 
   return new MockResponse()..httpCode = 404;
@@ -135,6 +137,9 @@ expect(read(response), "working");
 
 response = request(path: "users/1");
 expect(response.statusCode, 201);
+
+response = await _post("user", "{ 'name': 'Some User' }");
+expect(response.statusCode, 200);
 ```
 
 ### TLS
