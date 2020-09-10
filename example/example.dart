@@ -108,7 +108,7 @@ void main() {
   });
 
   test("Dispatcher", () async {
-    var dispatcher = (HttpRequest request) async {
+    var dispatcher = (StoredRequest request) async {
       if (request.uri.path == "/users") {
         return new MockResponse()
           ..httpCode = 200
@@ -119,6 +119,8 @@ void main() {
         return new MockResponse()
           ..httpCode = 200
           ..delay = new Duration(milliseconds: 1500);
+      } else if (request.body.contains('Some User')) {
+        return new MockResponse()..httpCode = 200;
       }
 
       return new MockResponse()..httpCode = 404;
@@ -141,6 +143,9 @@ void main() {
     stopwatch.stop();
     expect(stopwatch.elapsed.inMilliseconds,
         greaterThanOrEqualTo(new Duration(milliseconds: 1500).inMilliseconds));
+    expect(response.statusCode, 200);
+
+    response = await _post("user", "{ 'name': 'Some User' }");
     expect(response.statusCode, 200);
   });
 
@@ -342,6 +347,14 @@ _get(String path) async {
   HttpClient client = new HttpClient();
   HttpClientRequest request =
       await client.get(_server.host, _server.port, path);
+  return await request.close();
+}
+
+_post(String path, String body) async {
+  HttpClient client = new HttpClient();
+  HttpClientRequest request =
+      await client.post(_server.host, _server.port, path)
+        ..write(body);
   return await request.close();
 }
 
